@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from core.data_loader import CocoDataLoader
 from ui.widgets import (
     AdvancedStatsWidget,
+    CartographyWidget,
     DifficultyWidget,
     DuplicateWidget,
     GeometryWidget,
@@ -39,14 +40,26 @@ class MainWindow(QMainWindow):
     def initUI(self):
         """Initialize the UI."""
         self.setWindowTitle("Object Detection EDA Tool")
-        self.resize(1400, 900)  # 조금 더 넓게
+        self.resize(1400, 900)
 
-        # 파일 로드 버튼
+        # Top Layout
+        top_widget = QWidget()
+        top_layout = QVBoxLayout(top_widget)
+
+        # Controls
+        control_panel = QWidget()
+        control_layout = QVBoxLayout(control_panel)
+
         self.btn_load = QPushButton("Load COCO JSON")
         self.btn_load.clicked.connect(self.load_data)
         self.lbl_status = QLabel("Data not loaded")
 
-        # 탭 위젯 구성
+        control_layout.addWidget(self.btn_load)
+        control_layout.addWidget(self.lbl_status)
+
+        top_layout.addWidget(control_panel)
+
+        # Tab Widget
         self.tabs = QTabWidget()
 
         # Initialize tabs
@@ -61,8 +74,47 @@ class MainWindow(QMainWindow):
         self.quality_tab = ImageQualityWidget()
         self.strat_tab = StrategyWidget()
         self.signal_tab = SignalAnalysisWidget()
+        self.carto_tab = CartographyWidget()  # New Tab
         self.advanced_tab = AdvancedStatsWidget()
         self.viewer_tab = QWidget()
+
+        # Connect Guide Signals
+        self.stat_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("dashboard")
+        )
+        self.geo_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("geometry")
+        )
+        self.spatial_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("spatial")
+        )
+        self.rel_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("relation")
+        )
+        self.diff_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("difficulty")
+        )
+        self.dup_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("duplicates")
+        )
+        self.health_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("health")
+        )
+        self.quality_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("quality")
+        )
+        self.strat_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("strategy")
+        )
+        self.signal_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("signal")
+        )
+        self.carto_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("cartography")
+        )  # To be added in Guide
+        self.advanced_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("advanced")
+        )
 
         # Add tabs in logical order
         self.tabs.addTab(self.guide_tab, "📖 Guide")
@@ -76,19 +128,19 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.quality_tab, "🎨 Quality")
         self.tabs.addTab(self.strat_tab, "🚀 Strategy")
         self.tabs.addTab(self.signal_tab, "🔍 Signal")
+        self.tabs.addTab(self.carto_tab, "🗺️ Cartography")  # New Tab
         self.tabs.addTab(self.advanced_tab, "🔍 Advanced")
         self.tabs.addTab(self.viewer_tab, "📸 Viewer")
 
         self.loader = None
         self.img_root = ""
 
-        # 레이아웃 설정
+        # Layout Setup
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         layout = QVBoxLayout(central_widget)
-        layout.addWidget(self.btn_load)
-        layout.addWidget(self.lbl_status)
+        layout.addWidget(top_widget)
         layout.addWidget(self.tabs)
 
     def load_data(self):
@@ -127,11 +179,16 @@ class MainWindow(QMainWindow):
             self.advanced_tab.update_data(self.loader)
             self.advanced_tab.set_img_root(self.img_root)
 
+            # Data Cartography Setup
+            self.carto_tab.update_data(self.loader)
+            self.carto_tab.set_img_root(self.img_root)
+
+            # Re-initialize Viewer
             viewer_idx = self.tabs.indexOf(self.viewer_tab)
             self.tabs.removeTab(viewer_idx)
-
             self.viewer_tab = ImageViewer(self.loader, self.img_root)
-            self.tabs.insertTab(viewer_idx, self.viewer_tab, "Viewer")
+            self.tabs.insertTab(viewer_idx, self.viewer_tab, "📸 Viewer")
+
             self.tabs.setCurrentIndex(0)
 
         except Exception as e:
@@ -155,5 +212,4 @@ class MainWindow(QMainWindow):
         guide_idx = self.tabs.indexOf(self.guide_tab)
         if guide_idx != -1:
             self.tabs.setCurrentIndex(guide_idx)
-            # Scroll to section
             self.guide_tab.scroll_to_section(section_name)

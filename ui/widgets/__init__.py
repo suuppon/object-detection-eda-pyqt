@@ -1,4 +1,5 @@
 from .advanced_widget import AdvancedStatsWidget
+from .cartography_widget import CartographyWidget
 from .difficulty_widget import DifficultyWidget
 from .duplicate_widget import DuplicateWidget
 from .geometry_widget import GeometryWidget
@@ -14,6 +15,7 @@ from .viewer_widget import ImageViewer
 
 __all__ = [
     "AdvancedStatsWidget",
+    "CartographyWidget",
     "DifficultyWidget",
     "DuplicateWidget",
     "GeometryWidget",
