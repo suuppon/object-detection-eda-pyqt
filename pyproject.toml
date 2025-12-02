@@ -1,0 +1,16 @@
+[project]
+name = "object-detection-eda-pyqt"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "imagehash>=4.3.2",
+    "matplotlib>=3.10.7",
+    "opencv-python>=4.12.0.88",
+    "pandas>=2.3.3",
+    "pyside6>=6.10.1",
+    "scikit-image>=0.25.2",
+    "scikit-learn>=1.7.2",
+    "seaborn>=0.13.2",
+]
