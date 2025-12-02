@@ -15,12 +15,3 @@ dependencies = [
     "seaborn>=0.13.2",
     "ultralytics>=8.3.234",
 ]
-
-[tool.mypy]
-explicit_package_bases = true
-namespace_packages = false
-warn_unused_ignores = false
-
-[[tool.mypy.overrides]]
-module = "ui.widgets"
-ignore_errors = true

@@ -128,7 +128,7 @@ class ImageQualityWidget(QWidget):
         self.figure.clear()
 
         # 데이터 필터링 (파일 있는 것만)
-        df = self.analysis_df["file_exists"]
+        df = self.analysis_df[self.analysis_df["file_exists"]]
 
         if df.empty:
             ax = self.figure.add_subplot(111)

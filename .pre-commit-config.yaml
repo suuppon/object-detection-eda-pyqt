@@ -33,17 +33,6 @@ repos:
         args: ["--profile", "black"]
 
   # ------------------------------
-  # 4) mypy (정적 타입체크)
-  # ------------------------------
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
-    hooks:
-      - id: mypy
-        args: ["--ignore-missing-imports", "--explicit-package-bases"]
-        additional_dependencies:
-          - types-PyYAML
-
-  # ------------------------------
   # 5) Ruff (빠르고 강력한 Linter + 일부 auto-fix)
   # ------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit

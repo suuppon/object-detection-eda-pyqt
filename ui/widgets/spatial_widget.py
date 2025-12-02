@@ -1,7 +1,7 @@
 """Spatial analysis widget for object location and density analysis."""
 
 import seaborn as sns
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
@@ -23,9 +23,20 @@ class SpatialWidget(QWidget):
     def initUI(self):
         """Initialize the UI components."""
         self.main_layout = QVBoxLayout(self)
+
+        # Canvas
         self.figure = Figure(figsize=(10, 8))
         self.canvas = FigureCanvas(self.figure)
         self.main_layout.addWidget(self.canvas)
+
+        # Guide Button
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        self.btn_guide = QPushButton("View Guide")
+        # Note: Signal connection is handled in main_window or locally if needed
+        # self.btn_guide.clicked.connect(self._navigate_to_guide)
+        btn_layout.addWidget(self.btn_guide)
+        self.main_layout.addLayout(btn_layout)
 
     def update_data(self, data_loader):
         """Update the data loader and refresh plots.
@@ -142,17 +153,8 @@ class SpatialWidget(QWidget):
         self.figure.tight_layout()
         self.canvas.draw()
 
-        # Guide button at bottom (only add once)
-        if not hasattr(self, "btn_guide"):
-            btn_layout = QHBoxLayout()
-            btn_layout.addStretch()
-            self.btn_guide = QPushButton("📖 View Guide: Spatial Analysis")
-            self.btn_guide.clicked.connect(lambda: self._navigate_to_guide())
-            btn_layout.addWidget(self.btn_guide)
-            self.main_layout.addLayout(btn_layout)
-
     def _navigate_to_guide(self):
         """Navigate to the guide tab and scroll to spatial section."""
-        main_window = self.window()
-        if hasattr(main_window, "navigate_to_guide"):
-            main_window.navigate_to_guide("spatial")
+        # This method is kept for compatibility if called internally,
+        # but mainly the signal is connected in MainWindow.
+        pass

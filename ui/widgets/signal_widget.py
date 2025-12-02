@@ -123,7 +123,7 @@ class SignalAnalysisWidget(QWidget):
         self.figure.clear()
 
         # Filter valid data
-        df_obj = self.df_objects["is_valid"]
+        df_obj = self.df_objects[self.df_objects["is_valid"]]
 
         # 1. Texture Analysis (Entropy vs Contrast)
         ax1 = self.figure.add_subplot(221)
