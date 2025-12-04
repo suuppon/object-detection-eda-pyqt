@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.signal_analysis import SignalAnalysisThread
+from core.analysis.signal import SignalAnalysisThread
 
 
 class SignalAnalysisWidget(QWidget):

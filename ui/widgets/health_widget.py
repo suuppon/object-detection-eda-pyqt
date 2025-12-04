@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.analyzer import Analyzer
+from core.analysis.statistics import StatisticsAnalyzer
 
 
 class HealthCheckWidget(QWidget):
@@ -81,7 +81,9 @@ class HealthCheckWidget(QWidget):
             return
 
         self.table.setRowCount(0)
-        errors = Analyzer.check_health(self.loader.annotations, self.loader.images)
+        errors = StatisticsAnalyzer.check_health(
+            self.loader.annotations, self.loader.images
+        )
 
         self.table.setRowCount(len(errors))
 

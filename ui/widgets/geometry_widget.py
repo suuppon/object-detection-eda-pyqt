@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.analyzer import Analyzer
+from core.analysis.statistics import StatisticsAnalyzer
 
 
 class GeometryWidget(QWidget):
@@ -105,7 +105,7 @@ class GeometryWidget(QWidget):
 
         # 3. Small/Medium/Large Ratio (Pie Chart)
         ax3 = self.figure.add_subplot(233)
-        sizes = Analyzer.get_size_distribution(df)
+        sizes = StatisticsAnalyzer.get_size_distribution(df)
         labels = ["Small (<32²)", "Medium (32²~96²)", "Large (>96²)"]
         colors = ["#ff9999", "#66b3ff", "#99ff99"]
 
@@ -144,7 +144,9 @@ class GeometryWidget(QWidget):
             return
 
         k = self.k_spin.value()
-        centers, labels = Analyzer.get_kmeans_anchors(self.loader.annotations, k)
+        centers, labels = StatisticsAnalyzer.get_kmeans_anchors(
+            self.loader.annotations, k
+        )
 
         self.ax_kmeans.clear()
         self.ax_kmeans.axis("on")

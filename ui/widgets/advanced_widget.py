@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.advanced_analysis import AdvancedAnalysisThread
+from core.analysis.advanced import AdvancedAnalysisThread
 
 
 class AdvancedStatsWidget(QWidget):

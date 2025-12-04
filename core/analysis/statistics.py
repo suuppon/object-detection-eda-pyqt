@@ -3,7 +3,7 @@
 from sklearn.cluster import KMeans
 
 
-class Analyzer:
+class StatisticsAnalyzer:
     """Static analysis methods for dataset statistics and health checks."""
 
     @staticmethod

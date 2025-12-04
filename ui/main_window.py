@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.data_loader import CocoDataLoader, YoloDataLoader
+from core.data.coco import CocoDataLoader
+from core.data.yolo import YoloDataLoader
 from ui.widgets import (
     AdvancedStatsWidget,
     CartographyWidget,

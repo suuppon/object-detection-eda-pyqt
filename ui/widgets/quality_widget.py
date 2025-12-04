@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.quality_analysis import QualityAnalysisThread
+from core.analysis.quality import QualityAnalysisThread
 
 
 class ImageQualityWidget(QWidget):

@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.dataset_splitter import split_dataset
+from core.data.dataset_splitter import split_dataset
 from ui.widgets.export_dialog import ExportDialog
 
 

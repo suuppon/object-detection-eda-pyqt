@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QTextEdit, QVBoxLayout, QWidget
 
-from core.analyzer import Analyzer
+from core.analysis.statistics import StatisticsAnalyzer
 
 
 class StrategyWidget(QWidget):
@@ -51,7 +51,7 @@ class StrategyWidget(QWidget):
         report.append("# 🚀 Training Strategy Recommendation\n")
 
         # 1. Model Architecture
-        sizes = Analyzer.get_size_distribution(df)  # S, M, L
+        sizes = StatisticsAnalyzer.get_size_distribution(df)  # S, M, L
         total = sum(sizes)
         small_ratio = sizes[0] / total if total > 0 else 0
 

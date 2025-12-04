@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.cartography import CartographyWorker
+from core.analysis.cartography import CartographyWorker
 
 
 class CartographyWidget(QWidget):
