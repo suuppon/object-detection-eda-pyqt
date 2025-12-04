@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 
-class ImageViewer(QWidget):
+class ViewerWidget(QWidget):
     def __init__(self, data_loader, img_root_path):
         super().__init__()
         self.loader = data_loader

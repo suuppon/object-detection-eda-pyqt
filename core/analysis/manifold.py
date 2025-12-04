@@ -1,4 +1,4 @@
-"""Advanced analysis module for HOG/t-SNE manifold and MSCN statistics."""
+"""HOG/t-SNE manifold and MSCN statistics analysis module."""
 
 import os
 
@@ -11,15 +11,15 @@ from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
 
 
-class AdvancedAnalysisThread(QThread):
-    """Thread for advanced analysis including HOG features, t-SNE manifold, and MSCN statistics."""
+class ManifoldAnalyzerThread(QThread):
+    """Thread for HOG features, t-SNE manifold, and MSCN statistics analysis."""
 
     progress = Signal(int, str)
     finished_analysis = Signal(object, object)  # df_manifold, df_mscn
     error_occurred = Signal(str)
 
     def __init__(self, loader, root_path, max_samples=2000):
-        """Initialize advanced analysis thread.
+        """Initialize manifold analysis thread.
 
         Args:
             loader: CocoDataLoader instance with loaded dataset.

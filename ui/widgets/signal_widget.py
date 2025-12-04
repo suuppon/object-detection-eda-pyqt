@@ -12,10 +12,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.analysis.signal import SignalAnalysisThread
+from core.analysis.texture_analysis import TextureAnalyzerThread
 
 
-class SignalAnalysisWidget(QWidget):
+class SignalWidget(QWidget):
     def __init__(self, data_loader=None):
         super().__init__()
         self.loader = data_loader
@@ -94,7 +94,7 @@ class SignalAnalysisWidget(QWidget):
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
 
-        self.worker = SignalAnalysisThread(self.loader, self.img_root_path)
+        self.worker = TextureAnalyzerThread(self.loader, self.img_root_path)
         self.worker.progress.connect(self.update_progress)
         self.worker.finished_analysis.connect(self.on_finished)
         self.worker.error_occurred.connect(self.on_error)

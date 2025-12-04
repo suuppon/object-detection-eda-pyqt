@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 from core.analysis.statistics import StatisticsAnalyzer
 
 
-class HealthCheckWidget(QWidget):
+class HealthWidget(QWidget):
     def __init__(self, data_loader=None):
         super().__init__()
         self.loader = data_loader

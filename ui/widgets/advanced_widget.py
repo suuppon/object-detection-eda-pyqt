@@ -12,10 +12,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.analysis.advanced import AdvancedAnalysisThread
+from core.analysis.manifold import ManifoldAnalyzerThread
 
 
-class AdvancedStatsWidget(QWidget):
+class AdvancedWidget(QWidget):
     def __init__(self, data_loader=None):
         super().__init__()
         self.loader = data_loader
@@ -74,7 +74,7 @@ class AdvancedStatsWidget(QWidget):
         self.btn_run.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        self.worker = AdvancedAnalysisThread(self.loader, self.img_root_path)
+        self.worker = ManifoldAnalyzerThread(self.loader, self.img_root_path)
         self.worker.progress.connect(
             lambda v, m: (self.progress_bar.setValue(v), self.status_label.setText(m))
         )

@@ -8,9 +8,9 @@ from PySide6.QtCore import QThread, Signal
 from ultralytics import YOLO
 
 
-class CartographyWorker(QThread):
+class TrainingDynamicsAnalyzerThread(QThread):
     """
-    Background worker for Data Cartography Analysis using YOLOv8.
+    Background worker for Training Dynamics Analysis using YOLOv8.
     Handles COCO -> YOLO conversion and Training Dynamics Analysis.
     """
 
@@ -33,7 +33,7 @@ class CartographyWorker(QThread):
 
     def run(self):
         try:
-            self.progress_updated.emit(0, "Initializing Data Cartography...")
+            self.progress_updated.emit(0, "Initializing Training Dynamics Analysis...")
 
             # Setup workspace
             base_cache_dir = os.path.join(os.getcwd(), "yolo_cartography_cache")
@@ -158,7 +158,7 @@ class CartographyWorker(QThread):
                         self.dynamics[path].append(float(conf))
 
             # 5. Calculate Metrics
-            self.progress_updated.emit(95, "Calculating Cartography Metrics...")
+            self.progress_updated.emit(95, "Calculating Training Dynamics Metrics...")
 
             data_list = []
             for img_path, confs in self.dynamics.items():

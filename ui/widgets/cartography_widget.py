@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.analysis.cartography import CartographyWorker
+from core.analysis.training_dynamics import TrainingDynamicsAnalyzerThread
 
 
 class CartographyWidget(QWidget):
@@ -160,7 +160,7 @@ class CartographyWidget(QWidget):
         self.list_widget.clear()
 
         # Pass loader and img_root for auto-conversion
-        self.worker = CartographyWorker(
+        self.worker = TrainingDynamicsAnalyzerThread(
             loader=self.loader, img_root=self.img_root, epochs=epochs, batch_size=batch
         )
         self.worker.progress_updated.connect(self.update_progress)

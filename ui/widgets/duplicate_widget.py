@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.analysis.duplicate import DuplicateFinderThread
+from core.analysis.duplicate_finder import DuplicateFinderThread
 
 
 class DuplicateWidget(QWidget):

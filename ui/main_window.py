@@ -14,21 +14,21 @@ from PySide6.QtWidgets import (
 from core.data.coco import CocoDataLoader
 from core.data.yolo import YoloDataLoader
 from ui.widgets import (
-    AdvancedStatsWidget,
+    AdvancedWidget,
     CartographyWidget,
     DifficultyWidget,
     DuplicateWidget,
     GeometryWidget,
     GuideWidget,
-    HealthCheckWidget,
-    ImageQualityWidget,
-    ImageViewer,
+    HealthWidget,
     OverviewWidget,
+    QualityWidget,
     RelationWidget,
-    SignalAnalysisWidget,
+    SignalWidget,
     SpatialWidget,
     StatWidget,
     StrategyWidget,
+    ViewerWidget,
 )
 
 
@@ -77,12 +77,12 @@ class MainWindow(QMainWindow):
         self.rel_tab = RelationWidget()
         self.diff_tab = DifficultyWidget()
         self.dup_tab = DuplicateWidget()
-        self.health_tab = HealthCheckWidget()
-        self.quality_tab = ImageQualityWidget()
+        self.health_tab = HealthWidget()
+        self.quality_tab = QualityWidget()
         self.strat_tab = StrategyWidget()
-        self.signal_tab = SignalAnalysisWidget()
+        self.signal_tab = SignalWidget()
         self.carto_tab = CartographyWidget()  # New Tab
-        self.advanced_tab = AdvancedStatsWidget()
+        self.advanced_tab = AdvancedWidget()
         self.viewer_tab = QWidget()
 
         # Connect Guide Signals
@@ -273,14 +273,14 @@ class MainWindow(QMainWindow):
         # Re-initialize Viewer
         viewer_idx = self.tabs.indexOf(self.viewer_tab)
         self.tabs.removeTab(viewer_idx)
-        self.viewer_tab = ImageViewer(self.loader, self.img_root)
+        self.viewer_tab = ViewerWidget(self.loader, self.img_root)
         self.tabs.insertTab(viewer_idx, self.viewer_tab, "📸 Viewer")
 
         self.tabs.setCurrentIndex(0)
 
     def open_image_in_viewer(self, img_id):
         """Open the image in the viewer."""
-        if isinstance(self.viewer_tab, ImageViewer):
+        if isinstance(self.viewer_tab, ViewerWidget):
             idx = self.tabs.indexOf(self.viewer_tab)
             if idx != -1:
                 self.tabs.setCurrentIndex(idx)

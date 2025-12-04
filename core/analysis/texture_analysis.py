@@ -1,4 +1,4 @@
-"""Deep signal analysis module for texture, camouflage, FFT, and PCA."""
+"""Texture and camouflage analysis module with FFT and PCA."""
 
 import os
 
@@ -11,8 +11,8 @@ from skimage.measure import shannon_entropy
 from sklearn.decomposition import PCA
 
 
-class SignalAnalysisThread(QThread):
-    """Thread for deep signal analysis including texture, camouflage, FFT, and PCA."""
+class TextureAnalyzerThread(QThread):
+    """Thread for texture, camouflage, FFT, and PCA analysis."""
 
     progress = Signal(int, str)
     finished_analysis = Signal(
@@ -21,7 +21,7 @@ class SignalAnalysisThread(QThread):
     error_occurred = Signal(str)
 
     def __init__(self, loader, root_path, max_pca_samples=1000):
-        """Initialize signal analysis thread.
+        """Initialize texture analysis thread.
 
         Args:
             loader: CocoDataLoader instance with loaded dataset.
@@ -34,7 +34,7 @@ class SignalAnalysisThread(QThread):
         self.max_pca_samples = max_pca_samples
 
     def run(self):
-        """Execute signal analysis including texture, camouflage, FFT, and PCA."""
+        """Execute texture analysis including texture, camouflage, FFT, and PCA."""
         try:
             # 1. Setup
             annotations = self.loader.annotations

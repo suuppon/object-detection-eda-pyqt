@@ -8,7 +8,7 @@ import pandas as pd
 from PySide6.QtCore import QThread, Signal
 
 
-class QualityAnalysisThread(QThread):
+class QualityAnalyzerThread(QThread):
     """Thread for analyzing image quality metrics (brightness, contrast, blur)."""
 
     progress = Signal(int, int)

@@ -22,10 +22,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.analysis.quality import QualityAnalysisThread
+from core.analysis.quality import QualityAnalyzerThread
 
 
-class ImageQualityWidget(QWidget):
+class QualityWidget(QWidget):
     def __init__(self, data_loader=None):
         super().__init__()
         self.loader = data_loader
@@ -140,7 +140,7 @@ class ImageQualityWidget(QWidget):
         self.status_label.setText("Analyzing images... This may take a while.")
 
         # 워커 스레드 시작
-        self.worker = QualityAnalysisThread(self.loader.images, self.img_root_path)
+        self.worker = QualityAnalyzerThread(self.loader.images, self.img_root_path)
         self.worker.progress.connect(self.update_progress)
         self.worker.finished_analysis.connect(self.on_analysis_finished)
         self.worker.error_occurred.connect(self.on_error)
