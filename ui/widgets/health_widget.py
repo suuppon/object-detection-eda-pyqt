@@ -1,4 +1,6 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
@@ -30,18 +32,28 @@ class HealthCheckWidget(QWidget):
         self.btn_scan.clicked.connect(self.run_scan)
 
         self.lbl_summary = QLabel("Ready to scan.")
+        self.lbl_marked = QLabel("Marked for deletion: 0")
+        self.lbl_marked.setStyleSheet("color: red; font-weight: bold;")
 
         top_layout.addWidget(self.btn_scan)
         top_layout.addWidget(self.lbl_summary)
+        top_layout.addWidget(self.lbl_marked)
         top_panel.setLayout(top_layout)
 
         layout.addWidget(top_panel)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(4)
+        self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(
-            ["Error Type", "Image ID", "BBox / Details", "Action"]
+            [
+                "Marked for deletion",
+                "Error Type",
+                "Image ID",
+                "BBox / Details",
+                "Action",
+            ]
         )
+        self.table.setColumnWidth(0, 80)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         layout.addWidget(self.table)
@@ -72,18 +84,82 @@ class HealthCheckWidget(QWidget):
         errors = Analyzer.check_health(self.loader.annotations, self.loader.images)
 
         self.table.setRowCount(len(errors))
-        for i, err in enumerate(errors):
-            self.table.setItem(i, 0, QTableWidgetItem(err["type"]))
-            self.table.setItem(i, 1, QTableWidgetItem(str(err["img_id"])))
-            self.table.setItem(i, 2, QTableWidgetItem(err["detail"]))
 
+        for i, err in enumerate(errors):
+            img_id = err["img_id"]
+            is_excluded = img_id in self.loader.excluded_image_ids
+
+            # Checkbox for marking IMAGE (not bbox)
+            chk = QCheckBox()
+            chk.setProperty("img_id", img_id)
+            chk.setChecked(is_excluded)
+            chk.stateChanged.connect(self.on_checkbox_state_changed)
+            self.table.setCellWidget(i, 0, chk)
+
+            # Error type
+            self.table.setItem(i, 1, QTableWidgetItem(err["type"]))
+
+            # Image ID
+            self.table.setItem(i, 2, QTableWidgetItem(str(img_id)))
+
+            # Details
+            self.table.setItem(i, 3, QTableWidgetItem(err["detail"]))
+
+            # View button
             btn_view = QPushButton("View")
-            btn_view.clicked.connect(
-                lambda checked, eid=err["img_id"]: self.open_viewer(eid)
-            )
-            self.table.setCellWidget(i, 3, btn_view)
+            btn_view.clicked.connect(lambda checked, eid=img_id: self.open_viewer(eid))
+            self.table.setCellWidget(i, 4, btn_view)
+
+            # Highlight if excluded
+            if is_excluded:
+                self.update_row_highlighting(i, True)
 
         self.lbl_summary.setText(f"Scan Complete. Found {len(errors)} issues.")
+        self.update_marked_count()
+
+    def on_checkbox_state_changed(self, state):
+        """Handle checkbox state change for marking images."""
+        sender = self.sender()
+        if not isinstance(sender, QCheckBox) or not self.loader:
+            return
+
+        try:
+            img_id = int(sender.property("img_id"))
+        except (ValueError, TypeError):
+            return
+
+        # Mark/unmark image
+        if state == 2:
+            self.loader.mark_image_for_exclusion(img_id)
+        else:
+            self.loader.unmark_image_for_exclusion(img_id)
+
+        # Update UI
+        self.update_marked_count()
+
+        # Update row highlighting for this img_id
+        for row in range(self.table.rowCount()):
+            widget = self.table.cellWidget(row, 0)
+            if widget and widget.property("img_id") == img_id:
+                self.update_row_highlighting(row, state == 2)
+
+    def update_row_highlighting(self, row, is_excluded):
+        """Update highlighting for a specific row."""
+        for col in range(1, 4):  # Exclude checkbox and view button columns
+            item = self.table.item(row, col)
+            if item:
+                if is_excluded:
+                    item.setBackground(Qt.red)
+                    item.setForeground(Qt.white)
+                else:
+                    item.setBackground(Qt.transparent)
+                    item.setForeground(Qt.black)
+
+    def update_marked_count(self):
+        """Update the marked images counter."""
+        if self.loader:
+            count = len(self.loader.excluded_image_ids)
+            self.lbl_marked.setText(f"Marked images: {count}")
 
     def open_viewer(self, img_id):
         main_window = self.window()

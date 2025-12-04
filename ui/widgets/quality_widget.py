@@ -1,14 +1,23 @@
+import functools
+
 import numpy as np
 import seaborn as sns
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFileDialog,
+    QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -43,12 +52,50 @@ class ImageQualityWidget(QWidget):
         self.status_label = QLabel("Ready")
         control_layout.addWidget(self.status_label)
 
+        self.lbl_marked = QLabel("Marked for deletion: 0")
+        self.lbl_marked.setStyleSheet("color: red; font-weight: bold;")
+        control_layout.addWidget(self.lbl_marked)
+
         main_layout.addLayout(control_layout)
 
+        # Use QSplitter to allow resizing between graph and table
+        splitter = QSplitter(Qt.Vertical)
+
         # 차트 영역
-        self.figure = Figure(figsize=(10, 8))
+        self.figure = Figure(figsize=(10, 5))
         self.canvas = FigureCanvas(self.figure)
-        main_layout.addWidget(self.canvas)
+        splitter.addWidget(self.canvas)
+
+        # Low Quality Images Section
+        quality_group = QGroupBox("Low Quality Images (Check to mark for deletion)")
+        quality_layout = QVBoxLayout()
+
+        self.quality_table = QTableWidget()
+        self.quality_table.setColumnCount(8)
+        self.quality_table.setHorizontalHeaderLabels(
+            [
+                "Marked for deletion",
+                "ID",
+                "File Name",
+                "Brightness",
+                "Contrast",
+                "Blur Score",
+                "Issue",
+                "View",
+            ]
+        )
+        self.quality_table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.Stretch
+        )
+        self.quality_table.setMinimumHeight(200)
+
+        quality_layout.addWidget(self.quality_table)
+        quality_group.setLayout(quality_layout)
+        splitter.addWidget(quality_group)
+
+        # Set splitter proportions (graph:table = 60:40)
+        splitter.setSizes([600, 400])
+        main_layout.addWidget(splitter)
 
         # Guide button at bottom
         btn_layout = QHBoxLayout()
@@ -110,6 +157,8 @@ class ImageQualityWidget(QWidget):
         self.status_label.setText("Analysis Complete.")
         self.analysis_df = df
         self.plot_charts()
+        self.populate_quality_table()
+        self.update_marked_count()
 
     def on_error(self, error_msg):
         self.btn_load_path.setEnabled(True)
@@ -178,3 +227,192 @@ class ImageQualityWidget(QWidget):
 
         self.figure.tight_layout()
         self.canvas.draw()
+
+    def populate_quality_table(self):
+        """Populate table with low quality images."""
+        if self.analysis_df is None or self.analysis_df.empty:
+            return
+
+        df = self.analysis_df[self.analysis_df["file_exists"]].copy()
+        if df.empty:
+            return
+
+        # Define thresholds for low quality
+        # Too dark or too bright
+        brightness_issues = (df["brightness"] < 50) | (df["brightness"] > 200)
+        # Low blur score (blurry)
+        blur_threshold = df["blur_score"].quantile(0.1)  # Bottom 10%
+        blur_issues = df["blur_score"] < blur_threshold
+        # Low contrast
+        contrast_threshold = df["contrast"].quantile(0.1)
+        contrast_issues = df["contrast"] < contrast_threshold
+
+        # Combine issues
+        df["has_issue"] = brightness_issues | blur_issues | contrast_issues
+        df["issue_type"] = ""
+        df.loc[
+            brightness_issues & (df["brightness"] < 50), "issue_type"
+        ] += "Too Dark; "
+        df.loc[
+            brightness_issues & (df["brightness"] > 200), "issue_type"
+        ] += "Too Bright; "
+        df.loc[blur_issues, "issue_type"] += "Blurry; "
+        df.loc[contrast_issues, "issue_type"] += "Low Contrast; "
+
+        # Filter problematic images
+        problem_df = df[df["has_issue"]].copy()
+
+        # Populate table
+        self.quality_table.setRowCount(len(problem_df))
+        self.quality_table.blockSignals(True)
+
+        for row, (_, img_data) in enumerate(problem_df.iterrows()):
+            img_id = img_data["image_id"]
+            is_excluded = (
+                img_id in self.loader.excluded_image_ids if self.loader else False
+            )
+
+            # Checkbox - use QProperty to store img_id
+            chk = QCheckBox()
+            chk.setProperty("img_id", img_id)  # Store img_id in widget
+            # Block signals while setting initial state to prevent unwanted triggers
+            chk.blockSignals(True)
+            chk.setChecked(is_excluded)
+            chk.blockSignals(False)
+            chk.stateChanged.connect(self.on_checkbox_state_changed)
+            self.quality_table.setCellWidget(row, 0, chk)
+
+            # ID
+            self.quality_table.setItem(row, 1, QTableWidgetItem(str(img_id)))
+
+            # File Name
+            file_name = (
+                self.loader.images[img_id]["file_name"]
+                if self.loader and img_id in self.loader.images
+                else "N/A"
+            )
+            self.quality_table.setItem(row, 2, QTableWidgetItem(file_name))
+
+            # Brightness
+            self.quality_table.setItem(
+                row, 3, QTableWidgetItem(f"{img_data['brightness']:.1f}")
+            )
+
+            # Contrast
+            self.quality_table.setItem(
+                row, 4, QTableWidgetItem(f"{img_data['contrast']:.1f}")
+            )
+
+            # Blur Score
+            self.quality_table.setItem(
+                row, 5, QTableWidgetItem(f"{img_data['blur_score']:.2f}")
+            )
+
+            # Issue
+            issue_item = QTableWidgetItem(img_data["issue_type"].strip("; "))
+            self.quality_table.setItem(row, 6, issue_item)
+
+            # View button
+            btn_view = QPushButton("👁 View")
+            btn_view.clicked.connect(functools.partial(self.view_image, img_id))
+            self.quality_table.setCellWidget(row, 7, btn_view)
+
+            # Highlight if excluded
+            if is_excluded:
+                self.update_row_highlighting(row, True)
+
+        self.quality_table.blockSignals(False)
+
+    def on_checkbox_state_changed(self, state):
+        """Handle any checkbox state change - simplified version."""
+        sender = self.sender()
+        if not isinstance(sender, QCheckBox):
+            return
+
+        if not self.loader:
+            return
+
+        # Safely get img_id
+        try:
+            raw_id = sender.property("img_id")
+            if raw_id is None:
+                return
+            img_id = int(raw_id)
+        except (ValueError, TypeError):
+            return
+
+        # Mark/unmark image
+        # Qt.Checked is 2, Qt.Unchecked is 0.
+        # Using explicit integer comparison for robustness.
+        if state == 2:
+            self.loader.mark_image_for_exclusion(img_id)
+        else:
+            self.loader.unmark_image_for_exclusion(img_id)
+
+        # Update UI
+        self.update_marked_count()
+        self.update_row_highlighting_by_img_id(img_id)
+
+    def refresh_marked_status(self):
+        """Refresh marked status in table."""
+        if not self.loader or not hasattr(self, "quality_table"):
+            return
+
+        # Update all rows' highlighting based on current excluded status
+        for row in range(self.quality_table.rowCount()):
+            item = self.quality_table.item(row, 1)  # ID column
+            if item:
+                try:
+                    img_id = int(item.text())
+                    is_excluded = img_id in self.loader.excluded_image_ids
+                    # Update checkbox
+                    widget = self.quality_table.cellWidget(row, 0)
+                    if isinstance(widget, QCheckBox):
+                        widget.blockSignals(True)
+                        widget.setChecked(is_excluded)
+                        widget.blockSignals(False)
+                    # Update highlighting
+                    self.update_row_highlighting(row, is_excluded)
+                except ValueError:
+                    continue
+
+        self.update_marked_count()
+
+    def update_row_highlighting_by_img_id(self, img_id):
+        """Update highlighting for a specific image ID."""
+        is_excluded = img_id in self.loader.excluded_image_ids if self.loader else False
+
+        # Find row with this img_id
+        for row in range(self.quality_table.rowCount()):
+            item = self.quality_table.item(row, 1)  # ID column
+            if item and int(item.text()) == img_id:
+                self.update_row_highlighting(row, is_excluded)
+                break
+
+    def update_row_highlighting(self, row, is_excluded):
+        """Update highlighting for a specific row."""
+        for col in range(
+            1, self.quality_table.columnCount() - 1
+        ):  # Exclude View column (button)
+            item = self.quality_table.item(row, col)
+            if item:
+                if is_excluded:
+                    item.setBackground(Qt.red)
+                    item.setForeground(Qt.white)
+                else:
+                    item.setBackground(Qt.transparent)
+                    item.setForeground(Qt.black)
+
+    def view_image(self, img_id):
+        """Open image in viewer tab."""
+        main_window = self.window()
+        if hasattr(main_window, "open_image_in_viewer"):
+            main_window.open_image_in_viewer(img_id)
+        else:
+            QMessageBox.warning(self, "Warning", "Viewer not available.")
+
+    def update_marked_count(self):
+        """Update the marked images counter."""
+        if self.loader:
+            count = len(self.loader.excluded_image_ids)
+            self.lbl_marked.setText(f"Marked for deletion: {count}")

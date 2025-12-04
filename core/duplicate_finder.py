@@ -55,3 +55,17 @@ class DuplicateFinderThread(QThread):
 
     def stop(self):
         self.is_running = False
+
+    @staticmethod
+    def convert_to_groups(duplicates_dict):
+        """Convert duplicates dictionary to list of sets.
+
+        Args:
+            duplicates_dict: Dictionary {hash: [img_ids]} from finished signal.
+
+        Returns:
+            List of sets, each containing duplicate image IDs.
+        """
+        return [
+            set(img_ids) for img_ids in duplicates_dict.values() if len(img_ids) > 1
+        ]

@@ -65,6 +65,7 @@ class Analyzer:
                 {
                     "type": "Tiny Box",
                     "img_id": row["image_id"],
+                    "ann_id": row["id"],
                     "detail": f"w={row['bbox_w']:.1f}, h={row['bbox_h']:.1f}",
                     "bbox": row["bbox"],
                 }
@@ -86,6 +87,7 @@ class Analyzer:
                     {
                         "type": "Out of Bounds",
                         "img_id": img_id,
+                        "ann_id": row["id"],
                         "detail": f"Box[{x},{y},{w},{h}] vs Img[{img_w}x{img_h}]",
                         "bbox": row["bbox"],
                     }
@@ -98,6 +100,7 @@ class Analyzer:
                     {
                         "type": "Giant Box",
                         "img_id": img_id,
+                        "ann_id": row["id"],
                         "detail": f"Area Ratio: {row['area'] / img_area:.2f}",
                         "bbox": row["bbox"],
                     }
