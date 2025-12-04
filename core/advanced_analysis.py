@@ -32,15 +32,9 @@ class AdvancedAnalysisThread(QThread):
         self.max_samples = max_samples  # t-SNE는 느리므로 샘플링 필수
 
     def calculate_mscn_coefficients(self, img):
-        """Calculate MSCN (Mean Subtracted Contrast Normalization) coefficients.
-
-        MSCN is a key component of Natural Scene Statistics (NSS).
-
-        Args:
-            img: Input grayscale image.
-
-        Returns:
-            Normalized image with MSCN coefficients.
+        """
+        MSCN (Mean Subtracted Contrast Normalization)
+        자연 이미지 통계(Natural Scene Statistics)의 핵심
         """
         img = img.astype(np.float32) + 1.0  # 0방지
         mu = cv2.GaussianBlur(img, (7, 7), 0)
@@ -50,7 +44,6 @@ class AdvancedAnalysisThread(QThread):
         return structdis
 
     def run(self):
-        """Execute advanced analysis including HOG extraction, t-SNE, and MSCN calculation."""
         try:
             annotations = self.loader.annotations
             images_meta = self.loader.images
