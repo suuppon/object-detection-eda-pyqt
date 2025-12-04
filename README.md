@@ -1,6 +1,6 @@
 # Object Detection EDA Tool
 
-A PySide6-based desktop application for Exploratory Data Analysis (EDA) of object detection datasets in COCO format.
+A PySide6-based desktop application for Exploratory Data Analysis (EDA) of object detection datasets in COCO/YOLO format.
 
 ## Quick Start
 
@@ -21,3 +21,7 @@ This tool provides comprehensive analysis for object detection datasets, includi
 - Data quality checks (health, duplicates, image quality)
 - Advanced signal analysis (texture, camouflage, FFT, PCA)
 - Training strategy recommendations
+- Dataset overview and summary
+- Export functionality with train/val/test split options
+- Support for excluding selected images during export
+- Data cartography analysis
