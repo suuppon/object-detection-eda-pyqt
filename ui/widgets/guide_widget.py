@@ -40,56 +40,41 @@ class GuideWidget(QWidget):
         layout.addWidget(scroll)
 
     def scroll_to_section(self, section_name):
-        """Scroll to a specific section in the guide."""
+        """Scroll to a specific section in the guide"""
         if not self.text_edit:
             return
 
-        # Map section names to search terms (try multiple patterns for robustness)
+        # Map section names to search terms
         section_map = {
-            "dashboard": ["Dashboard Tab", "📊 Dashboard"],
-            "geometry": ["Geometry Analysis Tab", "📏 Geometry"],
-            "spatial": ["Spatial Analysis Tab", "🗺️ Spatial"],
-            "relation": ["Class Relation Analysis Tab", "🤝 Class Relation"],
-            "difficulty": ["Difficulty Analysis Tab", "🎯 Difficulty"],
-            "duplicates": ["Duplicate Detection Tab", "🔍 Duplicate"],
-            "health": ["Data Health Check Tab", "🧹 Data Health"],
-            "quality": ["Image Quality Tab", "🎨 Image Quality"],
-            "strategy": ["Training Strategy Tab", "🚀 Training Strategy"],
-            "signal": ["Signal Analysis Tab", "🔍 Signal Analysis"],
-            "advanced": ["Advanced Analysis", "Advanced"],
-            "viewer": ["Visual Explorer Tab", "📸 Visual Explorer"],
+            "dashboard": "Dashboard Tab",
+            "geometry": "Geometry Analysis Tab",
+            "spatial": "Spatial Analysis Tab",
+            "relation": "Class Relation Analysis Tab",
+            "difficulty": "Difficulty Analysis Tab",
+            "duplicates": "Duplicate Detection Tab",
+            "health": "Data Health Check Tab",
+            "quality": "Image Quality Tab",
+            "strategy": "Training Strategy Tab",
+            "signal": "Signal Analysis Tab",
+            "viewer": "Visual Explorer Tab",
         }
 
-        search_patterns = section_map.get(section_name.lower(), [section_name])
+        search_text = section_map.get(section_name.lower(), section_name)
 
-        # Find the section - try each pattern
+        # Find the section
         cursor = self.text_edit.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.Start)
         self.text_edit.setTextCursor(cursor)
 
-        found = False
-        for pattern in search_patterns:
-            # Reset to start for each search
-            cursor = self.text_edit.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.Start)
-            self.text_edit.setTextCursor(cursor)
-
-            # Search for the section header
-            found = self.text_edit.find(pattern)
-            if found:
-                break
-
+        # Search for the section header
+        found = self.text_edit.find(search_text)
         if found:
-            # Move cursor to beginning of line and scroll
+            # Move cursor to beginning of line
             cursor = self.text_edit.textCursor()
             cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
             self.text_edit.setTextCursor(cursor)
             # Scroll to make it visible
             self.text_edit.ensureCursorVisible()
-            # Additional scroll to show more context
-            scrollbar = self.text_edit.verticalScrollBar()
-            if scrollbar:
-                scrollbar.setValue(max(0, scrollbar.value() - 50))
 
     def generate_guide_text(self):
         return """
@@ -380,31 +365,6 @@ This tab analyzes your dataset and provides:
 - Plan targeted augmentation strategies
 
 **Note**: This analysis is computationally intensive and may take a while for large datasets.
-
----
-
-## 🔬 Advanced Analysis Tab {#advanced}
-
-### Dataset Manifold (HOG + t-SNE)
-- **What it shows**: 2D visualization of object similarity in feature space
-- **Why it matters**:
-  - **Clustered by color**: Objects of same class should cluster together
-  - **Mixed clusters**: May indicate label noise or similar visual patterns
-  - Helps understand dataset structure and potential confusion classes
-
-### Natural Scene Statistics (MSCN Variance)
-- **What it shows**: Variance of Mean Subtracted Contrast Normalization coefficients
-- **Why it matters**:
-  - Natural images follow Gaussian distribution for MSCN
-  - **Deviations**: May indicate synthetic data, heavy processing, or quality issues
-  - Helps validate dataset naturalness
-
-### Use Cases
-- Identify label noise (misclassified objects in t-SNE)
-- Validate dataset naturalness (MSCN distribution)
-- Understand feature space structure
-
-**Note**: This analysis uses stratified sampling by category for better representation.
 
 ---
 
