@@ -33,10 +33,19 @@ repos:
         args: ["--profile", "black"]
 
   # ------------------------------
-  # 5) Ruff (빠르고 강력한 Linter + 일부 auto-fix)
+  # 4) Ruff (빠르고 강력한 Linter + 일부 auto-fix)
   # ------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.5
     hooks:
       - id: ruff
         args: ["--fix", "--exit-non-zero-on-fix"]
+
+  # ------------------------------
+  # 5) Commit message convention 체크
+  # ------------------------------
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.18.3
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
