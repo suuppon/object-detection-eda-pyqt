@@ -1,5 +1,3 @@
-"""Duplicate image detection using perceptual hashing."""
-
 import os
 
 import imagehash
@@ -8,26 +6,17 @@ from PySide6.QtCore import QThread, Signal
 
 
 class DuplicateFinderThread(QThread):
-    """Thread for finding duplicate images using perceptual hash (PHash)."""
-
     progress = Signal(int, int)  # current, total
     finished = Signal(dict)  # results {hash: [img_ids]}
     error = Signal(str)
 
     def __init__(self, images_dict, img_root):
-        """Initialize duplicate finder thread.
-
-        Args:
-            images_dict: Dictionary mapping image_id to image metadata.
-            img_root: Root directory path for image files.
-        """
         super().__init__()
         self.images_dict = images_dict
         self.img_root = img_root
         self.is_running = True
 
     def run(self):
-        """Execute duplicate detection using perceptual hashing."""
         try:
             hash_dict = {}
             total = len(self.images_dict)
@@ -65,5 +54,4 @@ class DuplicateFinderThread(QThread):
             self.error.emit(str(e))
 
     def stop(self):
-        """Stop the duplicate detection process."""
         self.is_running = False
