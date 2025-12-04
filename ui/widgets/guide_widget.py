@@ -46,6 +46,7 @@ class GuideWidget(QWidget):
 
         # Map section names to search terms
         section_map = {
+            "overview": "Overview Tab",
             "dashboard": "Dashboard Tab",
             "geometry": "Geometry Analysis Tab",
             "spatial": "Spatial Analysis Tab",
@@ -81,6 +82,67 @@ class GuideWidget(QWidget):
 # 📖 Object Detection EDA Tool - User Guide
 
 This guide explains the meaning of metrics and visualizations across all analysis tabs.
+
+---
+
+## 📋 Overview Tab {#overview}
+
+### Dataset Summary
+- **Total Images**: Number of images in the dataset
+- **Total Instances**: Number of object annotations
+- **Total Classes**: Number of unique object categories
+- **Excluded Images**: Number of images marked for deletion (from Duplicates/Quality tabs)
+
+### Class Management
+- **View and Edit**: See all classes with their IDs and instance counts
+- **Rename Classes**: Double-click a class name to rename it
+- **Merge Classes**: Renaming multiple classes to the same name will merge them on export
+
+### Export Dataset
+Export your dataset in YOLO or COCO format with powerful options:
+
+#### Export Features:
+1. **Format Selection**: Choose YOLO or COCO format
+2. **Dataset Split**: Optionally split data into train/val/test sets
+   - Configure ratios (e.g., 70/20/10)
+   - Set random seed for reproducibility
+   - Duplicate groups stay together in the same split
+3. **Automatic Exclusion**: Images marked in Duplicates/Quality tabs are automatically excluded
+4. **Category Normalization**: Categories are automatically renormalized (0, 1, 2...) with duplicate names merged
+
+#### Export Process:
+1. Click "Export as YOLO" or "Export as COCO"
+2. Configure split options in the dialog
+3. Select destination folder
+4. Dataset is exported with images and labels/annotations
+
+#### Directory Structure (YOLO with split):
+```
+output_folder/
+├── data.yaml
+├── images/
+│   ├── train/
+│   ├── val/
+│   └── test/
+└── labels/
+    ├── train/
+    ├── val/
+    └── test/
+```
+
+#### Directory Structure (COCO with split):
+```
+output_folder/
+├── train.json
+├── val.json
+├── test.json
+└── images/
+    ├── train/
+    ├── val/
+    └── test/
+```
+
+**Tip**: Always check the "Excluded Images" count before exporting to ensure you're not accidentally excluding important data.
 
 ---
 

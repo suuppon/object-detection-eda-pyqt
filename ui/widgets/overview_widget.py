@@ -2,18 +2,23 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QDialog,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QMessageBox,
+    QProgressDialog,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
+
+from core.dataset_splitter import split_dataset
+from ui.widgets.export_dialog import ExportDialog
 
 
 class OverviewWidget(QWidget):
@@ -35,10 +40,13 @@ class OverviewWidget(QWidget):
         self.lbl_images = QLabel("Images: 0")
         self.lbl_instances = QLabel("Instances: 0")
         self.lbl_classes = QLabel("Classes: 0")
+        self.lbl_excluded = QLabel("Excluded: 0")
+        self.lbl_excluded.setStyleSheet("color: red; font-weight: bold;")
 
         info_layout.addWidget(self.lbl_images)
         info_layout.addWidget(self.lbl_instances)
         info_layout.addWidget(self.lbl_classes)
+        info_layout.addWidget(self.lbl_excluded)
         info_group.setLayout(info_layout)
         layout.addWidget(info_group)
 
@@ -85,9 +93,18 @@ class OverviewWidget(QWidget):
             return
 
         stats = self.loader.get_stats()
+        self.update_excluded_count()
+
         self.lbl_images.setText(f"Images: {stats['Total Images']}")
         self.lbl_instances.setText(f"Instances: {stats['Total Instances']}")
         self.lbl_classes.setText(f"Classes: {stats['Total Classes']}")
+
+    def update_excluded_count(self):
+        """Update excluded count from loader."""
+        if not self.loader:
+            return
+        excluded_count = len(self.loader.excluded_image_ids)
+        self.lbl_excluded.setText(f"Excluded: {excluded_count} images")
 
         # Update Class Table
         self.class_table.blockSignals(True)
@@ -137,35 +154,230 @@ class OverviewWidget(QWidget):
             pass
 
     def export_yolo(self):
-        """Export dataset as YOLO."""
+        """Export dataset as YOLO with options dialog."""
         if not self.loader:
+            QMessageBox.warning(self, "Warning", "No dataset loaded.")
             return
 
+        # Show export dialog
+        dialog = ExportDialog(self.loader, export_format="YOLO", parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        config = dialog.get_export_config()
+
+        # Show excluded images warning if any
+        if config["exclude_marked"]:
+            excluded_ids = self.loader.get_excluded_images()
+            excluded_count = len(excluded_ids)
+            if excluded_count > 0:
+                # Build detailed message
+                msg = f"⚠️ {excluded_count} image(s) are marked for exclusion.\n\n"
+                msg += "These images (and their labels) will NOT be included in the export.\n\n"
+
+                # Show first few image IDs/names as examples
+                sample_ids = list(excluded_ids)[:5]
+                sample_info = []
+                for img_id in sample_ids:
+                    if img_id in self.loader.images:
+                        file_name = self.loader.images[img_id].get(
+                            "file_name", str(img_id)
+                        )
+                        sample_info.append(f"  • ID {img_id}: {file_name}")
+
+                if sample_info:
+                    msg += "Sample excluded images:\n"
+                    msg += "\n".join(sample_info)
+                    if excluded_count > 5:
+                        msg += f"\n  ... and {excluded_count - 5} more\n"
+                    msg += "\n"
+
+                msg += "\nDo you want to continue?"
+
+                reply = QMessageBox.question(
+                    self,
+                    "Excluded Images",
+                    msg,
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.Yes,
+                )
+
+                if reply != QMessageBox.Yes:
+                    return
+
+        # Select directory
         save_dir = QFileDialog.getExistingDirectory(
             self, "Select Directory to Save YOLO Dataset"
         )
         if not save_dir:
             return
 
+        # Prepare split if enabled
+        split_info = None
+        if config["enable_split"]:
+            try:
+                split_info = split_dataset(
+                    self.loader,
+                    train_ratio=config["train_ratio"],
+                    val_ratio=config["val_ratio"],
+                    test_ratio=config["test_ratio"],
+                    random_seed=config["random_seed"],
+                    exclude_marked=config["exclude_marked"],
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "Split Error", f"Failed to split dataset: {e}"
+                )
+                return
+
+        # Export with progress
+        progress = QProgressDialog("Exporting dataset...", "Cancel", 0, 0, self)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.show()
+
         try:
-            self.loader.export_as_yolo(save_dir)
-            QMessageBox.information(self, "Success", f"Dataset exported to {save_dir}")
+            self.loader.export_as_yolo(
+                save_dir, split_info=split_info, exclude_marked=config["exclude_marked"]
+            )
+            progress.close()
+
+            # Show success message with stats
+            msg = f"Dataset exported successfully to:\n{save_dir}\n\n"
+            if split_info:
+                msg += f"Train: {len(split_info['train'])} images\n"
+                msg += f"Val: {len(split_info['val'])} images\n"
+                msg += f"Test: {len(split_info['test'])} images\n"
+
+            # Show excluded images info
+            if config["exclude_marked"]:
+                excluded_count = len(self.loader.excluded_image_ids)
+                if excluded_count > 0:
+                    msg += f"\n⚠️ {excluded_count} image(s) were excluded from export."
+
+            QMessageBox.information(self, "Export Complete", msg)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to export: {e}")
+            progress.close()
+            QMessageBox.critical(
+                self,
+                "Export Error",
+                f"Failed to export: {e}\n\nCheck console for details.",
+            )
 
     def export_coco(self):
-        """Export dataset as COCO."""
+        """Export dataset as COCO with options dialog."""
         if not self.loader:
+            QMessageBox.warning(self, "Warning", "No dataset loaded.")
             return
 
-        save_path, _ = QFileDialog.getSaveFileName(
-            self, "Save COCO JSON", "", "JSON Files (*.json)"
-        )
-        if not save_path:
+        # Show export dialog
+        dialog = ExportDialog(self.loader, export_format="COCO", parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
+
+        config = dialog.get_export_config()
+
+        # Show excluded images warning if any
+        if config["exclude_marked"]:
+            excluded_ids = self.loader.get_excluded_images()
+            excluded_count = len(excluded_ids)
+            if excluded_count > 0:
+                # Build detailed message
+                msg = f"⚠️ {excluded_count} image(s) are marked for exclusion.\n\n"
+                msg += "These images will NOT be included in the export.\n\n"
+
+                # Show first few image IDs/names as examples
+                sample_ids = list(excluded_ids)[:5]
+                sample_info = []
+                for img_id in sample_ids:
+                    if img_id in self.loader.images:
+                        file_name = self.loader.images[img_id].get(
+                            "file_name", str(img_id)
+                        )
+                        sample_info.append(f"  • ID {img_id}: {file_name}")
+
+                if sample_info:
+                    msg += "Sample excluded images:\n"
+                    msg += "\n".join(sample_info)
+                    if excluded_count > 5:
+                        msg += f"\n  ... and {excluded_count - 5} more\n"
+                    msg += "\n"
+
+                msg += "\nDo you want to continue?"
+
+                reply = QMessageBox.question(
+                    self,
+                    "Excluded Images",
+                    msg,
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.Yes,
+                )
+
+                if reply != QMessageBox.Yes:
+                    return
+
+        # Prepare split if enabled
+        split_info = None
+        if config["enable_split"]:
+            # For COCO with split, ask for directory instead of file
+            save_path = QFileDialog.getExistingDirectory(
+                self, "Select Directory to Save COCO Dataset (with splits)"
+            )
+            if not save_path:
+                return
+
+            try:
+                split_info = split_dataset(
+                    self.loader,
+                    train_ratio=config["train_ratio"],
+                    val_ratio=config["val_ratio"],
+                    test_ratio=config["test_ratio"],
+                    random_seed=config["random_seed"],
+                    exclude_marked=config["exclude_marked"],
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "Split Error", f"Failed to split dataset: {e}"
+                )
+                return
+        else:
+            # Without split, ask for JSON file path
+            save_path, _ = QFileDialog.getSaveFileName(
+                self, "Save COCO JSON", "", "JSON Files (*.json)"
+            )
+            if not save_path:
+                return
+
+        # Export with progress
+        progress = QProgressDialog("Exporting dataset...", "Cancel", 0, 0, self)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.show()
 
         try:
-            self.loader.export_as_coco(save_path)
-            QMessageBox.information(self, "Success", f"Dataset exported to {save_path}")
+            self.loader.export_as_coco(
+                save_path,
+                split_info=split_info,
+                exclude_marked=config["exclude_marked"],
+            )
+            progress.close()
+
+            # Show success message with stats
+            msg = f"Dataset exported successfully to:\n{save_path}\n\n"
+            if split_info:
+                msg += f"Train: {len(split_info['train'])} images\n"
+                msg += f"Val: {len(split_info['val'])} images\n"
+                msg += f"Test: {len(split_info['test'])} images\n"
+
+            # Show excluded images info
+            if config["exclude_marked"]:
+                excluded_count = len(self.loader.excluded_image_ids)
+                if excluded_count > 0:
+                    msg += f"\n⚠️ {excluded_count} image(s) were excluded from export."
+
+            QMessageBox.information(self, "Export Complete", msg)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to export: {e}")
+            progress.close()
+            QMessageBox.critical(
+                self,
+                "Export Error",
+                f"Failed to export: {e}\n\nCheck console for details.",
+            )

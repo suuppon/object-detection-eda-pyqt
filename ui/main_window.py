@@ -85,6 +85,9 @@ class MainWindow(QMainWindow):
         self.viewer_tab = QWidget()
 
         # Connect Guide Signals
+        self.overview_tab.btn_guide.clicked.connect(
+            lambda: self.navigate_to_guide("overview")
+        )
         self.stat_tab.btn_guide.clicked.connect(
             lambda: self.navigate_to_guide("dashboard")
         )
