@@ -5,6 +5,7 @@ from .duplicate_widget import DuplicateWidget
 from .geometry_widget import GeometryWidget
 from .guide_widget import GuideWidget
 from .health_widget import HealthCheckWidget
+from .overview_widget import OverviewWidget
 from .quality_widget import ImageQualityWidget
 from .relation_widget import RelationWidget
 from .signal_widget import SignalAnalysisWidget
@@ -22,6 +23,7 @@ __all__ = [
     "GuideWidget",
     "HealthCheckWidget",
     "ImageQualityWidget",
+    "OverviewWidget",
     "RelationWidget",
     "SignalAnalysisWidget",
     "SpatialWidget",
