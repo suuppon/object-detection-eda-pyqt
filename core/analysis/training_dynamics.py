@@ -7,6 +7,8 @@ import yaml
 from PySide6.QtCore import QThread, Signal
 from ultralytics import YOLO
 
+from core.utils.device import get_worker_device_arg
+
 
 class TrainingDynamicsAnalyzerThread(QThread):
     """
@@ -19,7 +21,13 @@ class TrainingDynamicsAnalyzerThread(QThread):
     error_occurred = Signal(str)
 
     def __init__(
-        self, loader=None, img_root=None, epochs=5, batch_size=16, dataset_yaml=None
+        self,
+        loader=None,
+        img_root=None,
+        epochs=5,
+        batch_size=16,
+        dataset_yaml=None,
+        gpu_id=0,
     ):
         super().__init__()
         self.loader = loader
@@ -27,6 +35,8 @@ class TrainingDynamicsAnalyzerThread(QThread):
         self.dataset_yaml = dataset_yaml  # Optional: use existing yaml if provided
         self.epochs = epochs
         self.batch_size = batch_size
+        self.gpu_id = gpu_id
+        self.device = get_worker_device_arg(gpu_id)
         self.is_running = True
         self.temp_dir = None
         self.project_dir = None
@@ -123,6 +133,7 @@ class TrainingDynamicsAnalyzerThread(QThread):
                     pretrained=True,  # This loads weights from 'model' argument (current_weights)
                     verbose=False,
                     exist_ok=True,
+                    device=self.device,
                 )
 
                 # Update weights for next iteration
@@ -144,7 +155,12 @@ class TrainingDynamicsAnalyzerThread(QThread):
 
                 # Predict using the CURRENT model state (which is now trained for 1 more epoch)
                 preds = model.predict(
-                    source=image_files, stream=True, conf=0.01, iou=0.5, verbose=False
+                    source=image_files,
+                    stream=True,
+                    conf=0.01,
+                    iou=0.5,
+                    verbose=False,
+                    device=self.device,
                 )
 
                 for result in preds:
