@@ -1,12 +1,15 @@
 import seaborn as sns
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QProgressBar,
+    QProgressDialog,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -90,6 +93,21 @@ class SignalWidget(QWidget):
             if not self.img_root_path:
                 return
 
+        # Show modal loading dialog
+        self.loading_dialog = QProgressDialog(
+            "Running texture analysis (Texture, Camouflage, FFT, PCA)...\n\n"
+            "Please wait while the analysis is being performed.\n"
+            "This may take a while for large datasets.",
+            None, 0, 0, self
+        )
+        self.loading_dialog.setWindowTitle("Analyzing")
+        self.loading_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.loading_dialog.setCancelButton(None)
+        self.loading_dialog.setMinimumDuration(0)
+        self.loading_dialog.setRange(0, 0)
+        self.loading_dialog.show()
+        QApplication.processEvents()
+
         self.btn_run.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
@@ -105,11 +123,15 @@ class SignalWidget(QWidget):
         self.status_label.setText(msg)
 
     def on_error(self, msg):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.btn_run.setEnabled(True)
         self.status_label.setText("Error")
         QMessageBox.critical(self, "Error", msg)
 
     def on_finished(self, df_obj, df_img, pca_res):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.df_objects = df_obj
         self.df_images = df_img
         self.pca_data = pca_res

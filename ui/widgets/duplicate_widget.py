@@ -3,11 +3,13 @@ import os
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QProgressBar,
+    QProgressDialog,
     QPushButton,
     QScrollArea,
     QTreeWidget,
@@ -38,6 +40,10 @@ class DuplicateWidget(QWidget):
         self.btn_scan = QPushButton("🔍 Scan for Duplicates (PHash)")
         self.btn_scan.clicked.connect(self.run_scan)
 
+        self.btn_filter = QPushButton("✨ Filter Duplicates")
+        self.btn_filter.clicked.connect(self.filter_duplicates)
+        self.btn_filter.setEnabled(False)  # Disabled until scan is complete
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
 
@@ -46,6 +52,7 @@ class DuplicateWidget(QWidget):
         self.lbl_marked.setStyleSheet("color: red; font-weight: bold;")
 
         control_layout.addWidget(self.btn_scan)
+        control_layout.addWidget(self.btn_filter)
         control_layout.addWidget(self.progress_bar)
         control_layout.addWidget(self.lbl_status)
         control_layout.addWidget(self.lbl_marked)
@@ -107,6 +114,21 @@ class DuplicateWidget(QWidget):
             self.lbl_status.setText("Error: Data or Image Root not loaded.")
             return
 
+        # Show modal loading dialog
+        self.loading_dialog = QProgressDialog(
+            "Scanning for duplicate images...\n\n"
+            "Please wait while images are being analyzed.\n"
+            "This may take a while for large datasets.",
+            None, 0, 0, self
+        )
+        self.loading_dialog.setWindowTitle("Scanning Duplicates")
+        self.loading_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.loading_dialog.setCancelButton(None)
+        self.loading_dialog.setMinimumDuration(0)
+        self.loading_dialog.setRange(0, 0)
+        self.loading_dialog.show()
+        QApplication.processEvents()
+
         self.btn_scan.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
@@ -125,7 +147,10 @@ class DuplicateWidget(QWidget):
         self.lbl_status.setText(f"Scanning... {current}/{total}")
 
     def on_scan_finished(self, duplicates):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.btn_scan.setEnabled(True)
+        self.btn_filter.setEnabled(True)  # Enable filter button after scan
         self.progress_bar.setVisible(False)
         self.lbl_status.setText(
             f"Scan Complete. Found {len(duplicates)} duplicate groups."
@@ -174,6 +199,8 @@ class DuplicateWidget(QWidget):
         self.update_marked_count()
 
     def on_scan_error(self, msg):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.btn_scan.setEnabled(True)
         self.progress_bar.setVisible(False)
         self.lbl_status.setText(f"Error: {msg}")
@@ -233,7 +260,12 @@ class DuplicateWidget(QWidget):
                 continue
 
             img_info = self.loader.images[img_id]
-            file_path = os.path.join(self.img_root, img_info["file_name"])
+            
+            # Use absolute path if available, otherwise construct from img_root
+            if "abs_path" in img_info and img_info["abs_path"]:
+                file_path = img_info["abs_path"]
+            else:
+                file_path = os.path.join(self.img_root, img_info["file_name"])
 
             # 이미지 컨테이너 (이미지 + 체크박스 + 라벨)
             container = QWidget()
@@ -319,3 +351,46 @@ class DuplicateWidget(QWidget):
         if self.loader:
             count = len(self.loader.excluded_image_ids)
             self.lbl_marked.setText(f"Marked for deletion: {count}")
+
+    def filter_duplicates(self):
+        """Automatically mark all but one image in each duplicate group for deletion."""
+        if not self.loader or not self.duplicates_dict:
+            self.lbl_status.setText("Error: No duplicate groups found. Please scan first.")
+            return
+
+        if not self.loader:
+            return
+
+        # Temporarily disconnect itemChanged to avoid triggering during bulk updates
+        self.tree.itemChanged.disconnect(self.on_tree_item_changed)
+
+        total_marked = 0
+        for hash_val, img_ids in self.duplicates_dict.items():
+            if len(img_ids) <= 1:
+                continue  # Skip groups with only one image
+
+            # Sort to ensure consistent selection (keep the first/lowest ID)
+            sorted_ids = sorted(img_ids)
+            keep_id = sorted_ids[0]  # Keep the first one
+
+            # Mark all others for exclusion
+            for img_id in sorted_ids[1:]:
+                if img_id not in self.loader.excluded_image_ids:
+                    self.loader.mark_image_for_exclusion(img_id)
+                    total_marked += 1
+
+        # Reconnect itemChanged signal
+        self.tree.itemChanged.connect(self.on_tree_item_changed)
+
+        # Refresh the tree to show updated checkboxes and colors
+        self.refresh_marked_status()
+
+        # Update status message
+        if total_marked > 0:
+            self.lbl_status.setText(
+                f"Filtered duplicates: {total_marked} images marked for deletion."
+            )
+        else:
+            self.lbl_status.setText(
+                "All duplicates already filtered or no duplicates found."
+            )

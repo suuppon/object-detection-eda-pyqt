@@ -1,10 +1,12 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QProgressDialog,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -80,10 +82,28 @@ class HealthWidget(QWidget):
         if not self.loader:
             return
 
+        # Show modal loading dialog
+        self.loading_dialog = QProgressDialog(
+            "Scanning for data health issues...\n\n"
+            "Please wait while the dataset is being analyzed.\n"
+            "This may take a while for large datasets.",
+            None, 0, 0, self
+        )
+        self.loading_dialog.setWindowTitle("Scanning")
+        self.loading_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.loading_dialog.setCancelButton(None)
+        self.loading_dialog.setMinimumDuration(0)
+        self.loading_dialog.setRange(0, 0)
+        self.loading_dialog.show()
+        QApplication.processEvents()
+
         self.table.setRowCount(0)
         errors = StatisticsAnalyzer.check_health(
             self.loader.annotations, self.loader.images
         )
+        
+        # Close loading dialog
+        self.loading_dialog.close()
 
         self.table.setRowCount(len(errors))
 

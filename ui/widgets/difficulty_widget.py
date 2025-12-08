@@ -1,8 +1,11 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QProgressDialog,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -69,9 +72,25 @@ class DifficultyWidget(QWidget):
         if not self.loader:
             return
 
+        # Show modal loading dialog
+        self.loading_dialog = QProgressDialog(
+            "Analyzing image difficulty...\n\n"
+            "Please wait while the analysis is being performed.\n"
+            "This may take a while for large datasets.",
+            None, 0, 0, self
+        )
+        self.loading_dialog.setWindowTitle("Analyzing")
+        self.loading_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.loading_dialog.setCancelButton(None)
+        self.loading_dialog.setMinimumDuration(0)
+        self.loading_dialog.setRange(0, 0)
+        self.loading_dialog.show()
+        QApplication.processEvents()
+
         self.table.setRowCount(0)
         df = self.loader.annotations
         if df.empty:
+            self.loading_dialog.close()
             return
 
         # 이미지별 난이도 분석
@@ -101,6 +120,9 @@ class DifficultyWidget(QWidget):
         img_stats = img_stats.sort_values("score", ascending=False).head(
             100
         )  # 상위 100개만 표시
+
+        # Close loading dialog
+        self.loading_dialog.close()
 
         self.table.setRowCount(len(img_stats))
         for i, (img_id, row) in enumerate(img_stats.iterrows()):
