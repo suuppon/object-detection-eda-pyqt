@@ -47,38 +47,8 @@ class TextureAnalyzerThread(QThread):
             total_ops = len(annotations) + len(images_meta)
             current_op = 0
 
-            # --- Stratified Sampling for PCA ---
-            # Avoid pure random sampling, use stratified sampling by category
-            # This ensures all classes are represented in PCA analysis if possible
-            pca_indices = []
-            if not annotations.empty:
-                # Group by category
-                grouped = annotations.groupby("category_name")
-                n_classes = len(grouped)
-                if n_classes > 0:
-                    samples_per_class = max(1, self.max_pca_samples // n_classes)
-
-                    for _, group in grouped:
-                        n = min(len(group), samples_per_class)
-                        if n > 0:
-                            sampled = group.sample(n=n, random_state=42)
-                            pca_indices.extend(sampled.index.tolist())
-
-                    # If we still have room, fill with random samples from remaining
-                    remaining_count = self.max_pca_samples - len(pca_indices)
-                    if remaining_count > 0:
-                        remaining_indices = list(
-                            set(annotations.index) - set(pca_indices)
-                        )
-                        if remaining_indices:
-                            additional = np.random.choice(
-                                remaining_indices,
-                                min(len(remaining_indices), remaining_count),
-                                replace=False,
-                            )
-                            pca_indices.extend(additional)
-
-            pca_indices_set = set(pca_indices)
+            # --- Use all data for PCA (no sampling) ---
+            pca_indices_set = set(annotations.index) if not annotations.empty else set()
 
             # --- Phase 1: Object-Level Analysis (Texture, Camouflage) ---
             for idx, row in annotations.iterrows():
