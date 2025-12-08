@@ -75,6 +75,9 @@ class YoloDataLoader:
                     break
 
         loader.categories = categories
+        # Exclude category 0 (super category)
+        if 0 in loader.categories:
+            del loader.categories[0]
         loader.img_root = img_dir
         loader.base_path = base_path  # Store base path for reference
 
@@ -161,6 +164,9 @@ class YoloDataLoader:
 
                 try:
                     class_id = int(parts[0])
+                    # Skip category 0 (super category)
+                    if class_id == 0:
+                        continue
                     center_x = float(parts[1])
                     center_y = float(parts[2])
                     width_norm = float(parts[3])
