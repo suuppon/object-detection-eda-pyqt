@@ -49,25 +49,8 @@ class ManifoldAnalyzerThread(QThread):
             images_meta = self.loader.images
 
             # --- 1. Data Manifold (HOG + t-SNE) ---
-            # Sampling for t-SNE (너무 많으면 오래 걸림)
-            # Optimize: Stratified Sampling
-            if len(annotations) > self.max_samples:
-                # Stratified sampling by category
-                grouped = annotations.groupby("category_name")
-                n_classes = len(grouped)
-                samples_per_class = max(1, self.max_samples // n_classes)
-
-                sampled_dfs = []
-                for _, group in grouped:
-                    n = min(len(group), samples_per_class)
-                    sampled_dfs.append(group.sample(n=n, random_state=42))
-
-                sampled_df = pd.concat(sampled_dfs)
-                # If still more than max, sample again
-                if len(sampled_df) > self.max_samples:
-                    sampled_df = sampled_df.sample(n=self.max_samples, random_state=42)
-            else:
-                sampled_df = annotations
+            # Use all data (no sampling)
+            sampled_df = annotations
 
             hog_features = []
             valid_indices = []
