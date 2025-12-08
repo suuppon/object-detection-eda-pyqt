@@ -5,6 +5,7 @@ import seaborn as sns
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -96,12 +97,14 @@ class GeometryWidget(QWidget):
         ax1.set_xlabel("Width")
         ax1.set_ylabel("Height")
         ax1.grid(True, alpha=0.3)
+        QApplication.processEvents()
 
         # 2. Aspect Ratio Histogram
         ax2 = self.figure.add_subplot(232)
         sns.histplot(df["aspect_ratio"], bins=50, ax=ax2, kde=True)
         ax2.set_title("Aspect Ratio Distribution (w/h)")
         ax2.set_xlabel("Ratio")
+        QApplication.processEvents()
 
         # 3. Small/Medium/Large Ratio (Pie Chart)
         ax3 = self.figure.add_subplot(233)
@@ -111,6 +114,7 @@ class GeometryWidget(QWidget):
 
         ax3.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90, colors=colors)
         ax3.set_title("Object Size Distribution (COCO Metric)")
+        QApplication.processEvents()
 
         # 4. Image Resolution Analysis (New)
         ax4 = self.figure.add_subplot(234)
@@ -127,6 +131,7 @@ class GeometryWidget(QWidget):
             ax4.grid(True)
         else:
             ax4.text(0.5, 0.5, "No Image Info", ha="center")
+        QApplication.processEvents()
 
         # 5. K-Means Result (Placeholder)
         self.ax_kmeans = self.figure.add_subplot(235)
@@ -137,6 +142,7 @@ class GeometryWidget(QWidget):
 
         self.figure.tight_layout()
         self.canvas.draw()
+        QApplication.processEvents()
 
     def run_kmeans(self):
         """Run K-Means clustering on bounding box dimensions for anchor analysis."""
