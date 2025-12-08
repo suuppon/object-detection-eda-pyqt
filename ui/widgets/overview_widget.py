@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from core.data.dataset_splitter import split_dataset
 from ui.widgets.export_dialog import ExportDialog
+from ui.widgets.selective_clear_dialog import SelectiveClearDialog
 
 
 class OverviewWidget(QWidget):
@@ -64,20 +65,35 @@ class OverviewWidget(QWidget):
         class_group.setLayout(class_layout)
         layout.addWidget(class_group)
 
-        # 3. Export Actions
-        export_group = QGroupBox("Export Dataset")
+        # 3. Data Management Actions
+        action_group = QGroupBox("Data Management")
+        action_layout = QVBoxLayout()
+        
+        # Clear Data buttons
+        clear_layout = QHBoxLayout()
+        self.btn_clear_selective = QPushButton("🔍 Clear Selected Data")
+        self.btn_clear_selective.setStyleSheet("background-color: #ffa500; color: white; font-weight: bold;")
+        self.btn_clear_selective.clicked.connect(self.clear_selected_data)
+        self.btn_clear = QPushButton("🗑️ Clear All Data")
+        self.btn_clear.setStyleSheet("background-color: #ff6b6b; color: white; font-weight: bold;")
+        self.btn_clear.clicked.connect(self.clear_all_data)
+        clear_layout.addWidget(self.btn_clear_selective)
+        clear_layout.addWidget(self.btn_clear)
+        clear_layout.addStretch()
+        action_layout.addLayout(clear_layout)
+        
+        # Export Actions
         export_layout = QHBoxLayout()
-
         self.btn_export_yolo = QPushButton("Export as YOLO")
         self.btn_export_yolo.clicked.connect(self.export_yolo)
-
         self.btn_export_coco = QPushButton("Export as COCO")
         self.btn_export_coco.clicked.connect(self.export_coco)
-
         export_layout.addWidget(self.btn_export_yolo)
         export_layout.addWidget(self.btn_export_coco)
-        export_group.setLayout(export_layout)
-        layout.addWidget(export_group)
+        action_layout.addLayout(export_layout)
+        
+        action_group.setLayout(action_layout)
+        layout.addWidget(action_group)
 
         # Guide button
         guide_layout = QHBoxLayout()
@@ -98,6 +114,69 @@ class OverviewWidget(QWidget):
         self.lbl_images.setText(f"Images: {stats['Total Images']}")
         self.lbl_instances.setText(f"Instances: {stats['Total Instances']}")
         self.lbl_classes.setText(f"Classes: {stats['Total Classes']}")
+
+    def clear_selected_data(self):
+        """Clear selected data based on criteria."""
+        from PySide6.QtWidgets import QApplication
+        
+        if not self.loader:
+            QMessageBox.information(self, "No Data", "No data loaded.")
+            return
+        
+        dialog = SelectiveClearDialog(self.loader, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        
+        img_ids_to_remove = dialog.get_image_ids_to_remove()
+        
+        if not img_ids_to_remove:
+            return
+        
+        # Remove images
+        self.loader.remove_images(img_ids_to_remove)
+        QApplication.processEvents()
+        
+        # Update UI
+        self.update_data(self.loader)
+        QApplication.processEvents()
+        
+        # Get main window to refresh other widgets
+        main_window = self.window()
+        if hasattr(main_window, "_update_ui_with_loader"):
+            main_window._update_ui_with_loader()
+        
+        QMessageBox.information(
+            self,
+            "Data Removed",
+            f"Successfully removed {len(img_ids_to_remove)} image(s) and their annotations."
+        )
+
+    def clear_all_data(self):
+        """Clear all loaded data."""
+        if not self.loader:
+            QMessageBox.information(self, "No Data", "No data to clear.")
+            return
+        
+        reply = QMessageBox.question(
+            self,
+            "Clear All Data",
+            "Are you sure you want to clear all loaded data?\n\n"
+            "This will remove all images, annotations, and categories.\n"
+            "This action cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        
+        if reply == QMessageBox.Yes:
+            # Get main window to clear loader
+            main_window = self.window()
+            if hasattr(main_window, "clear_data"):
+                main_window.clear_data()
+            else:
+                # Fallback: clear loader directly
+                self.loader = None
+                self.update_data(None)
+                QMessageBox.information(self, "Data Cleared", "All data has been cleared.")
 
     def update_excluded_count(self):
         """Update excluded count from loader."""
