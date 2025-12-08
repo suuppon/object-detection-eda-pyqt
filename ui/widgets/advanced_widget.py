@@ -1,12 +1,14 @@
 import seaborn as sns
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QProgressBar,
+    QProgressDialog,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -71,6 +73,22 @@ class AdvancedWidget(QWidget):
             if not self.img_root_path:
                 return
 
+        # Show modal loading dialog
+        self.loading_dialog = QProgressDialog(
+            "Running advanced analysis (HOG/t-SNE + NSS)...\n\n"
+            "Please wait while the analysis is being performed.\n"
+            "This may take a while for large datasets.",
+            None, 0, 0, self
+        )
+        self.loading_dialog.setWindowTitle("Analyzing")
+        self.loading_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.loading_dialog.setCancelButton(None)  # Disable cancel button
+        self.loading_dialog.setMinimumDuration(0)  # Show immediately
+        self.loading_dialog.setRange(0, 0)  # Indeterminate progress
+        self.loading_dialog.show()
+        from PySide6.QtWidgets import QApplication
+        QApplication.processEvents()
+
         self.btn_run.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
@@ -83,6 +101,8 @@ class AdvancedWidget(QWidget):
         self.worker.start()
 
     def on_error(self, msg):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.btn_run.setEnabled(True)
         self.status_label.setText("Error")
         QMessageBox.critical(self, "Error", msg)
@@ -103,6 +123,8 @@ class AdvancedWidget(QWidget):
         self.img_root_path = path
 
     def on_finished(self, df_manifold, df_mscn):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.df_manifold = df_manifold
         self.df_mscn = df_mscn
         self.btn_run.setEnabled(True)
