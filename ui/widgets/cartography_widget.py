@@ -9,13 +9,16 @@ from matplotlib.widgets import LassoSelector
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
     QProgressBar,
+    QProgressDialog,
     QPushButton,
     QSpinBox,
     QSplitter,
@@ -56,6 +59,12 @@ class CartographyWidget(QWidget):
         self.combo_batch.addItems(["8", "16", "32"])
         self.combo_batch.setCurrentText("16")
 
+        self.edit_gpu = QLineEdit()
+        self.edit_gpu.setPlaceholderText("e.g. 0 or 0,1")
+        self.edit_gpu.setText("0")
+        self.edit_gpu.setToolTip("Set GPU IDs (e.g., '0', '0,1', '0,1,2'). Default is '0'.")
+        self.edit_gpu.setFixedWidth(100)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
 
@@ -63,6 +72,8 @@ class CartographyWidget(QWidget):
         control_layout.addWidget(self.spin_epochs)
         control_layout.addWidget(QLabel("Batch:"))
         control_layout.addWidget(self.combo_batch)
+        control_layout.addWidget(QLabel("GPU:"))
+        control_layout.addWidget(self.edit_gpu)
         control_layout.addWidget(self.progress_bar)
         control_layout.addStretch()
 
@@ -153,6 +164,22 @@ class CartographyWidget(QWidget):
 
         epochs = self.spin_epochs.value()
         batch = int(self.combo_batch.currentText())
+        gpu_id = self.edit_gpu.text()  # Get string input for multi-gpu
+
+        # Show modal loading dialog
+        self.loading_dialog = QProgressDialog(
+            "Running data cartography analysis...\n\n"
+            "This will convert the dataset to YOLO format and train a model.\n"
+            "Please wait, this may take a while.",
+            None, 0, 0, self
+        )
+        self.loading_dialog.setWindowTitle("Analyzing")
+        self.loading_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.loading_dialog.setCancelButton(None)
+        self.loading_dialog.setMinimumDuration(0)
+        self.loading_dialog.setRange(0, 0)
+        self.loading_dialog.show()
+        QApplication.processEvents()
 
         self.btn_run.setEnabled(False)
         self.progress_bar.setValue(0)
@@ -161,7 +188,11 @@ class CartographyWidget(QWidget):
 
         # Pass loader and img_root for auto-conversion
         self.worker = TrainingDynamicsAnalyzerThread(
-            loader=self.loader, img_root=self.img_root, epochs=epochs, batch_size=batch
+            loader=self.loader,
+            img_root=self.img_root,
+            epochs=epochs,
+            batch_size=batch,
+            gpu_id=gpu_id,
         )
         self.worker.progress_updated.connect(self.update_progress)
         self.worker.analysis_finished.connect(self.on_analysis_finished)
@@ -175,6 +206,8 @@ class CartographyWidget(QWidget):
 
     @Slot(pd.DataFrame)
     def on_analysis_finished(self, df):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.df = df
         self.progress_bar.setVisible(False)
         self.btn_run.setEnabled(True)
@@ -187,6 +220,8 @@ class CartographyWidget(QWidget):
 
     @Slot(str)
     def on_error(self, err):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.progress_bar.setVisible(False)
         self.btn_run.setEnabled(True)
         QMessageBox.critical(self, "Error", f"An error occurred:\n{err}")
