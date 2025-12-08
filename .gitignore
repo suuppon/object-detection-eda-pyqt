@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Cartography analysis
+yolo*
+yolo_cartography_cache/
