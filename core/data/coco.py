@@ -19,6 +19,12 @@ class CocoDataLoader:
         loader.images = {img["id"]: img for img in data["images"]}
         loader.categories = {cat["id"]: cat["name"] for cat in data["categories"]}
         loader.annotations = pd.DataFrame(data["annotations"])
+        
+        # Exclude category 0 (super category)
+        if 0 in loader.categories:
+            del loader.categories[0]
+        if not loader.annotations.empty:
+            loader.annotations = loader.annotations[loader.annotations["category_id"] != 0]
 
         if loader.img_root:
             for img_id, img_info in loader.images.items():
