@@ -6,6 +6,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QFileDialog,
     QGroupBox,
@@ -14,6 +15,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QProgressBar,
+    QProgressDialog,
     QPushButton,
     QSplitter,
     QTableWidget,
@@ -134,6 +136,21 @@ class QualityWidget(QWidget):
                 return
             self.img_root_path = dir_path
 
+        # Show modal loading dialog
+        self.loading_dialog = QProgressDialog(
+            "Analyzing image quality...\n\n"
+            "Please wait while images are being analyzed.\n"
+            "This may take a while for large datasets.",
+            None, 0, 0, self
+        )
+        self.loading_dialog.setWindowTitle("Analyzing")
+        self.loading_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.loading_dialog.setCancelButton(None)
+        self.loading_dialog.setMinimumDuration(0)
+        self.loading_dialog.setRange(0, 0)
+        self.loading_dialog.show()
+        QApplication.processEvents()
+
         self.btn_load_path.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
@@ -152,6 +169,8 @@ class QualityWidget(QWidget):
         self.status_label.setText(f"Processing: {percentage}% ({total} images)")
 
     def on_analysis_finished(self, df):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.btn_load_path.setEnabled(True)
         self.progress_bar.setValue(100)
         self.status_label.setText("Analysis Complete.")
@@ -161,6 +180,8 @@ class QualityWidget(QWidget):
         self.update_marked_count()
 
     def on_error(self, error_msg):
+        if hasattr(self, 'loading_dialog'):
+            self.loading_dialog.close()
         self.btn_load_path.setEnabled(True)
         self.progress_bar.setVisible(False)
         self.status_label.setText(f"Error: {error_msg}")
@@ -216,9 +237,10 @@ class QualityWidget(QWidget):
 
         # 4. Image Size vs Blur Score
         ax4 = self.figure.add_subplot(224)
-        # 크기를 Area로 단순화
-        df["img_area"] = df["width"] * df["height"]
-        sns.scatterplot(data=df, x="img_area", y="blur_score", ax=ax4, alpha=0.5, s=15)
+        # 크기를 Area로 단순화 (Use copy to avoid SettingWithCopyWarning)
+        plot_df = df.copy()
+        plot_df["img_area"] = plot_df["width"] * plot_df["height"]
+        sns.scatterplot(data=plot_df, x="img_area", y="blur_score", ax=ax4, alpha=0.5, s=15)
         ax4.set_title("Image Area vs Blur Score")
         ax4.set_xlabel("Image Area (px)")
         ax4.set_ylabel("Blur Score (Sharpness)")
