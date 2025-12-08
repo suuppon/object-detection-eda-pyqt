@@ -19,6 +19,7 @@ class UnifiedDataLoader:
         self.base_path = None  # For YOLO dataset base path
         self.excluded_image_ids = set()  # Images marked for exclusion
         self.duplicate_groups = []  # List of sets containing duplicate image IDs
+        self.source_tracking = {}  # {source_name: set(image_ids)} - Track which images came from which source
 
     def get_stats(self):
         """Get basic dataset statistics."""
@@ -41,6 +42,10 @@ class UnifiedDataLoader:
         self.img_root = Path(img_root) if img_root else None
         if self.img_root:
             for img_id, img_info in self.images.items():
+                # If abs_path already exists, keep it (support multiple sources)
+                if "abs_path" in img_info and Path(img_info["abs_path"]).exists():
+                    continue
+                    
                 if "file_name" in img_info:
                     # Check if file_name is already absolute
                     if Path(img_info["file_name"]).is_absolute():
@@ -70,6 +75,68 @@ class UnifiedDataLoader:
             for img_id, img_info in self.images.items()
             if img_id not in self.excluded_image_ids
         }
+
+    def remove_images(self, image_ids):
+        """Remove specific images and their annotations from the dataset.
+        
+        Args:
+            image_ids: Set or list of image IDs to remove.
+        """
+        image_ids = set(image_ids)
+        
+        # Remove images
+        for img_id in image_ids:
+            self.images.pop(img_id, None)
+            self.excluded_image_ids.discard(img_id)  # Also remove from excluded if present
+        
+        # Remove annotations for these images
+        if not self.annotations.empty:
+            self.annotations = self.annotations[
+                ~self.annotations["image_id"].isin(image_ids)
+            ]
+        
+        # Update duplicate groups
+        if self.duplicate_groups:
+            self.duplicate_groups = [
+                group - image_ids for group in self.duplicate_groups
+            ]
+            # Remove empty groups
+            self.duplicate_groups = [g for g in self.duplicate_groups if len(g) > 1]
+        
+        # Update source tracking
+        for source_name in list(self.source_tracking.keys()):
+            self.source_tracking[source_name] -= image_ids
+            if not self.source_tracking[source_name]:
+                del self.source_tracking[source_name]
+    
+    def set_source(self, source_name, image_ids=None):
+        """Set source name for images.
+        
+        Args:
+            source_name: Name of the source dataset.
+            image_ids: Optional set of image IDs. If None, uses all current images.
+        """
+        if image_ids is None:
+            image_ids = set(self.images.keys())
+        else:
+            image_ids = set(image_ids)
+        
+        if source_name not in self.source_tracking:
+            self.source_tracking[source_name] = set()
+        self.source_tracking[source_name].update(image_ids)
+        
+        # Also add source metadata to each image
+        for img_id in image_ids:
+            if img_id in self.images:
+                self.images[img_id]["source"] = source_name
+    
+    def get_sources(self):
+        """Get list of source names."""
+        return list(self.source_tracking.keys())
+    
+    def get_source_image_ids(self, source_name):
+        """Get image IDs for a specific source."""
+        return self.source_tracking.get(source_name, set()).copy()
 
     def set_duplicate_groups(self, groups):
         """Set duplicate image groups.
@@ -145,6 +212,9 @@ class UnifiedDataLoader:
 
             new_img_info = img_info.copy()
             new_img_info["id"] = new_img_id
+            # Preserve source information if present
+            if "source" in img_info:
+                new_img_info["source"] = img_info["source"]
             self.images[new_img_id] = new_img_info
 
             # If the other loader had this image excluded, exclude it in merged loader too
@@ -152,6 +222,15 @@ class UnifiedDataLoader:
                 self.excluded_image_ids.add(new_img_id)
 
             next_img_id += 1
+        
+        # 2.5. Merge source tracking information
+        for source_name, img_ids in other.source_tracking.items():
+            # Map old image IDs to new image IDs
+            new_img_ids = {img_map[old_id] for old_id in img_ids if old_id in img_map}
+            if source_name in self.source_tracking:
+                self.source_tracking[source_name].update(new_img_ids)
+            else:
+                self.source_tracking[source_name] = new_img_ids
 
         # 3. Merge Annotations
         if not other.annotations.empty:
@@ -197,6 +276,20 @@ class UnifiedDataLoader:
             new_categories[new_id] = cat_name
             for old_id in old_ids:
                 old_to_new_map[old_id] = new_id
+
+        # Ensure category 0 is always "vehicle"
+        if 0 in new_categories:
+            # Category 0 exists, rename it to "vehicle"
+            new_categories[0] = "vehicle"
+        else:
+            # Category 0 doesn't exist, insert "vehicle" as category 0 and shift others
+            shifted_categories = {0: "vehicle"}
+            for old_id, cat_name in new_categories.items():
+                shifted_categories[old_id + 1] = cat_name
+            new_categories = shifted_categories
+            # Update the mapping to account for the shift (all new IDs are incremented by 1)
+            for old_id in old_to_new_map:
+                old_to_new_map[old_id] = old_to_new_map[old_id] + 1
 
         # Update categories
         self.categories = new_categories
