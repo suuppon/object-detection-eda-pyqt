@@ -9,7 +9,7 @@ from core.data.data_loader import UnifiedDataLoader
 class CocoDataLoader:
     """Factory for loading COCO datasets into UnifiedDataLoader."""
 
-    def __new__(cls, json_path, img_root=None):
+    def __new__(cls, json_path, img_root=None, source_name=None):
         loader = UnifiedDataLoader()
 
         with open(json_path, "r") as f:
@@ -19,6 +19,10 @@ class CocoDataLoader:
         loader.images = {img["id"]: img for img in data["images"]}
         loader.categories = {cat["id"]: cat["name"] for cat in data["categories"]}
         loader.annotations = pd.DataFrame(data["annotations"])
+        
+        # Set source name if provided
+        if source_name:
+            loader.set_source(source_name)
         
         # Exclude category 0 (super category)
         if 0 in loader.categories:
